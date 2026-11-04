@@ -1,0 +1,498 @@
+openapi: 3.0.3
+info:
+  title: Campus Announcement Scheduler API (Project 26)
+  version: 1.0.0
+  description: |
+    REST API contract for **Project 26: Campus Announcement Scheduler** covering
+    Weeks 13–18 requirements:
+    - Bounded workflow (`draft` -> `in_review` -> `approved` -> `scheduled` -> `published` -> `expired` -> `archived`)
+    - Week 13 (SA7): Scheduled publication, schedule conflict checks (`409`), transient failure retry (`publish_failed_transient`), permanent failure escalation to human action (`publish_failed_permanent`), automatic expiration, and structured audit logging.
+    - Week 14 (SA8 & IA5): HMAC-SHA256 Bearer authentication (`401`), Role-Based Access Control (`403`), input validation & XSS protection (`400`), safe logging redaction, and campus user data minimization.
+    - Week 16: Health (`/health`), telemetry metrics (`/metrics`), and snapshot/rollback recovery.
+servers:
+  - url: http://127.0.0.1:8080
+    description: Local Development & Demonstration Server
+  - url: https://127.0.0.1:8443
+    description: Local TLS / HTTPS Hardened Server (--tls)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: CAS-JWT-HMAC-SHA256
+
+  schemas:
+    AnnouncementStaffDto:
+      type: object
+      required:
+        - id
+        - title
+        - body
+        - category
+        - targetAudience
+        - pinned
+        - status
+        - authorId
+        - authorName
+        - retryCount
+        - simulateFailure
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          example: ANN-101
+        title:
+          type: string
+          minLength: 5
+          maxLength: 120
+        body:
+          type: string
+          minLength: 10
+          maxLength: 2000
+        category:
+          type: string
+          enum: [academic, emergency, events, maintenance, general]
+        targetAudience:
+          type: string
+          example: All Campus
+        pinned:
+          type: boolean
+        status:
+          type: string
+          enum:
+            - draft
+            - in_review
+            - rejected
+            - approved
+            - scheduled
+            - publish_failed_transient
+            - publish_failed_permanent
+            - published
+            - expired
+            - archived
+        authorId:
+          type: string
+        authorName:
+          type: string
+        reviewerId:
+          type: string
+          nullable: true
+        reviewNotes:
+          type: string
+          nullable: true
+        publishAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiredAt:
+          type: string
+          format: date-time
+          nullable: true
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        nextRetryAt:
+          type: string
+          format: date-time
+          nullable: true
+        retryCount:
+          type: integer
+        lastError:
+          type: string
+          nullable: true
+        simulateFailure:
+          type: string
+          enum: [none, transient_once, permanent_failure]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AnnouncementCampusMinimizedDto:
+      description: Week 14 Data-Minimized DTO returned to Campus Users (strips internal authorId, reviewerId, reviewNotes, retryCount, and lastError).
+      type: object
+      required: [id, title, body, category, targetAudience, pinned, status]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        category:
+          type: string
+        targetAudience:
+          type: string
+        pinned:
+          type: boolean
+        status:
+          type: string
+          enum: [published]
+        publishedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+        correlationId:
+          type: string
+
+paths:
+  /api/v1/health:
+    get:
+      summary: Service Liveness, Readiness & Escalation Queue Depth
+      tags: [Observability]
+      responses:
+        '200':
+          description: Service health status and virtual clock timestamp
+
+  /api/v1/metrics:
+    get:
+      summary: Week 16 Performance, Latency, Security & Automation Telemetry
+      tags: [Observability]
+      responses:
+        '200':
+          description: Structured metrics JSON (p50/p95/p99 latency, request counts, retry/expiration counters)
+
+  /api/v1/auth/login:
+    post:
+      summary: Authenticate user and issue HMAC-SHA256 Bearer token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: publisher@campus.edu
+                password:
+                  type: string
+                  example: PublisherPass!26
+                tokenMode:
+                  type: string
+                  enum: [valid, expired, tampered]
+                  default: valid
+      responses:
+        '200':
+          description: Authenticated successfully
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/announcements:
+    get:
+      summary: List announcements (RBAC filtered & data minimized for campus_user)
+      tags: [Workflow]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of announcements
+        '401':
+          description: Missing, expired, or tampered bearer token
+    post:
+      summary: Create a new announcement draft (Author only)
+      tags: [Workflow]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body, category, targetAudience]
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+                category:
+                  type: string
+                targetAudience:
+                  type: string
+                pinned:
+                  type: boolean
+      responses:
+        '201':
+          description: Draft created
+        '400':
+          description: Validation error or prohibited script injection
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Caller is not an Author)
+
+  /api/v1/announcements/{id}:
+    get:
+      summary: Retrieve single announcement by ID
+      tags: [Workflow]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Announcement details
+        '403':
+          description: Campus user attempted to access non-published announcement
+        '404':
+          description: Announcement not found
+    put:
+      summary: Update draft or rejected announcement (Author only)
+      tags: [Workflow]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Draft updated
+        '400':
+          description: Invalid state or input validation failure
+        '403':
+          description: Forbidden
+
+  /api/v1/announcements/{id}/submit:
+    post:
+      summary: Submit draft for review (Author only)
+      tags: [Workflow]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transitioned to in_review
+        '400':
+          description: Invalid state transition
+        '403':
+          description: Forbidden
+
+  /api/v1/announcements/{id}/review:
+    post:
+      summary: Approve or reject an announcement in review (Reviewer only)
+      tags: [Workflow]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [approve, reject]
+                reviewNotes:
+                  type: string
+      responses:
+        '200':
+          description: Transitioned to approved or rejected
+        '400':
+          description: Missing review notes on rejection or invalid state
+        '403':
+          description: Forbidden
+
+  /api/v1/announcements/{id}/schedule:
+    post:
+      summary: Validate schedule conflict rules and schedule publication (Publisher only)
+      tags: [Workflow, Automation]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [publishAt, expiresAt]
+              properties:
+                publishAt:
+                  type: string
+                  format: date-time
+                expiresAt:
+                  type: string
+                  format: date-time
+                pinned:
+                  type: boolean
+                simulateFailure:
+                  type: string
+                  enum: [none, transient_once, permanent_failure]
+      responses:
+        '200':
+          description: Transitioned to scheduled
+        '400':
+          description: Invalid schedule window or state transition
+        '403':
+          description: Forbidden
+        '409':
+          description: Schedule conflict detected (overlapping pinned slot or duplicate title)
+
+  /api/v1/announcements/{id}/recover:
+    post:
+      summary: Human recovery action for permanent publication failure (Publisher only)
+      tags: [Automation]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                resolutionNote:
+                  type: string
+                publishImmediately:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Permanent failure resolved and announcement published/rescheduled
+        '400':
+          description: Announcement is not in publish_failed_permanent state
+
+  /api/v1/announcements/{id}/archive:
+    post:
+      summary: Archive an expired announcement (Publisher only)
+      tags: [Workflow]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transitioned to archived
+
+  /api/v1/automation/tick:
+    post:
+      summary: Trigger scheduler publication, retry, and expiration cycle (Publisher only)
+      tags: [Automation]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                advanceMinutes:
+                  type: integer
+                  default: 0
+                advanceSeconds:
+                  type: integer
+                  default: 0
+                ignoreRetryBackoff:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Scheduler tick execution report
+
+  /api/v1/audit-logs:
+    get:
+      summary: Retrieve structured audit logs with sensitive-field redaction (Reviewer & Publisher only)
+      tags: [Observability, Security]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Structured audit trail entries
+        '403':
+          description: Forbidden for Campus Users and Authors
+
+  /api/v1/admin/snapshot:
+    post:
+      summary: Create point-in-time repository snapshot (Publisher only)
+      tags: [Operations]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Snapshot metadata
+
+  /api/v1/admin/rollback:
+    post:
+      summary: Restore repository state from snapshot (Publisher only)
+      tags: [Operations]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: State restored
+
+  /api/v1/admin/reset-demo:
+    post:
+      summary: Reset controlled dataset and virtual clock for live defense
+      tags: [Operations]
+      responses:
+        '200':
+          description: Reset complete
+
