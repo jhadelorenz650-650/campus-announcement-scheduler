@@ -1,5 +1,5 @@
 # PFEBSIT 002: Integrative Programming and Technologies 2
-## Week 13: Automation Foundation — SA7
+## Weeks 13–14: Automation Foundation (SA7) & Secure Integration (SA8 / IA5)
 
 ### Student Information
 - **Student Name:** Martin, Jhade Lorenz Gedo C.
@@ -9,7 +9,7 @@
 
 ---
 
-## Project 26: Campus Announcement Scheduler (Week 13 Scope)
+## Project 26: Campus Announcement Scheduler (Weeks 13–14 Scope)
 
 ### 1. Problem and Intended Users
 Approved announcements need controlled publication, automatic expiration, and collision-free scheduling. The primary users are:
@@ -30,7 +30,9 @@ The student prototype implements a strict 10-state bounded state machine:
                                         +--------------------------------+
 ```
 
-### 3. Week 13 SA7 Required Deliverables Summary
+---
+
+### 3. Week 13 Automation Foundation (SA7) Summary
 
 | Requirement | Implementation Details | Evidence Location |
 | :--- | :--- | :--- |
@@ -44,6 +46,23 @@ The student prototype implements a strict 10-state bounded state machine:
 | **Recovered Transient Failure** | `ANN-103` encounters simulated gateway timeout ($503$), transitions to `publish_failed_transient`, retries with backoff, and automatically recovers to `published`. | Live UI Tab 2 & Test `T-REL-01` |
 | **Permanent Failure Routed to Human Action** | `ANN-104` encounters permanent downstream schema rejection, transitions to `publish_failed_permanent`, halts retries, routes to escalation queue, and resolves via manual action. | Live UI Tab 2 & Test `T-REL-01` |
 | **Maintainability Note** | Pure-Dart domain engine with decoupled persistence and deterministic virtual clock for zero-friction testing. | `docs/WEEK13_AUTOMATION_SA7.md` (§7) |
+
+---
+
+### 4. Week 14 Secure Integration (SA8 & IA5) Summary
+
+| Requirement | Implementation Details | Evidence Location |
+| :--- | :--- | :--- |
+| **Password Storage** | Iterative salted SHA-256 (1,000 rounds) password key derivation; plaintext passwords never stored or logged. | `AuthService.hashPassword` (`lib/backend/security/auth_service.dart`) |
+| **Stateless Authentication** | HMAC-SHA256 signed bearer tokens (`sub`, `role`, `iat`, `exp`) with constant-time signature verification (`_constantTimeEquals`). | `AuthService.issueToken` / `verifyToken` |
+| **Role-Based Access Control (RBAC)** | Strict least-privilege guard enforcing separation of duties across Author, Reviewer, Publisher, and Campus User. Unauthorized attempts return `HTTP 403 RBAC_FORBIDDEN`. | `ServerApp._guard` (`lib/backend/server_app.dart`) |
+| **Transport Security & Headers** | Configurable `--tls` mode (`SecurityContext`) + `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and CSP headers. | `ServerApp._securityAndTelemetryMiddleware` |
+| **Protected Configuration** | Zero secrets in source control; `.env.example` template with environment-variable loading. | `.env.example` & `bin/server.dart` |
+| **Input Validation & Sanitization** | Length boundaries (`title: 5..120`, `body: 10..2000`) and active script injection payload blocking (`<script>`, `javascript:`). | `AnnouncementValidator` (`lib/shared/validation/announcement_validator.dart`) |
+| **Safe Structured Logging** | Automatic recursive scrubbing of `password`, `token`, `secret`, and `authorization` into `[REDACTED]`. | `AuditLogEntry.redactSensitiveMap` (`lib/shared/models/audit_log.dart`) |
+| **Data Minimization** | Campus users receive data-minimized DTO stripping internal reviewer notes, author ID, failure diagnostics, and retry counts. | `Announcement.toMinimizedCampusJson` |
+| **Negative-Path Verification** | Verified live and automated test responses for altered tokens (`401`), expired tokens (`401`), unauthorized roles (`403`), and invalid inputs (`400`). | Live UI Tab 4 & Tests `T-SEC-01`–`T-SEC-04` |
+| **Residual Risk Register** | Documented analysis of token revocation windows, local JSON file locking, and self-signed browser trust. | `docs/WEEK14_SECURITY_SA8_IA5.md` (§4) |
 
 ---
 
@@ -76,7 +95,7 @@ flutter run -d chrome
 ```bash
 flutter test
 ```
-*(Runs 13 unit, widget, boundary, conflict, and recovery tests verifying the Week 13 automation lifecycle.)*
+*(Runs 13 unit, widget, boundary, conflict, security, and recovery tests verifying the Weeks 13–14 lifecycle.)*
 
 ---
 
@@ -87,10 +106,10 @@ flutter test
 | **Content Author** | `author@campus.edu` | `AuthorPass!26` | Create drafts, edit rejected announcements, submit for review |
 | **Reviewer** | `reviewer@campus.edu` | `ReviewerPass!26` | Review queue, approve or reject with mandatory revision notes |
 | **Publisher** | `publisher@campus.edu` | `PublisherPass!26` | Schedule publication, run conflict checks, trigger ticks, human recovery |
-| **Campus User** | `student@campus.edu` | `StudentPass!26` | View active, non-expired published announcements |
+| **Campus User** | `student@campus.edu` | `StudentPass!26` | View active, non-expired published announcements (Data Minimized) |
 
 ---
 
-## Detailed Week 13 Technical Documentation
-For the complete technical report, workflow boundary analysis, trigger decisions, structured log extracts, and maintainability notes, please refer to:
-👉 **[`docs/WEEK13_AUTOMATION_SA7.md`](docs/WEEK13_AUTOMATION_SA7.md)**
+## Technical Documentation Links
+- 👉 **[Week 13: Automation Foundation (SA7)](docs/WEEK13_AUTOMATION_SA7.md)**
+- 👉 **[Week 14: Secure Integration (SA8 & IA5)](docs/WEEK14_SECURITY_SA8_IA5.md)**
