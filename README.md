@@ -1,22 +1,24 @@
 # PFEBSIT 002: Integrative Programming and Technologies 2
-## Weeks 13–14: Automation Foundation (SA7) & Secure Integration (SA8 / IA5)
+## Weeks 13–15: Automation Foundation (SA7), Secure Integration (SA8 / IA5) & Testing and Hardening (IA6)
 
 ### Student Information
 - **Student Name:** Martin, Jhade Lorenz Gedo C.
-- **Course & Year:** Bachelor of Science in Information Technology (BSIT) — 3rd Year
+- **Student ID:** 24-10586
+- **Course & Year:** Bachelor of Science in Information Technology (BSIT) — 3rd Year (Section 3A)
 - **Institution:** University of La Salette, Inc.
 - **Project Assigned:** Project 26 — Campus Announcement Scheduler
+- **Repository:** `https://github.com/jhadelorenz650-650/campus-announcement-scheduler`
 
 ---
 
-## Project 26: Campus Announcement Scheduler (Weeks 13–14 Scope)
+## Project 26: Campus Announcement Scheduler (Weeks 13–15 Scope)
 
 ### 1. Problem and Intended Users
 Approved announcements need controlled publication, automatic expiration, and collision-free scheduling. The primary users are:
 - **Content Authors**: Draft and submit announcements for review.
 - **Reviewers**: Evaluate announcements for policy compliance, approving or returning with mandatory revision notes.
 - **Publishers**: Schedule approved announcements with automatic conflict detection, manage automation schedules, and resolve escalated permanent failures.
-- **Campus Users**: Access active, non-expired announcements through a clean, published feed.
+- **Campus Users**: Access active, non-expired announcements through a clean, data-minimized published feed.
 
 ### 2. Bounded Workflow & State Machine
 The student prototype implements a strict 10-state bounded state machine:
@@ -66,6 +68,19 @@ The student prototype implements a strict 10-state bounded state machine:
 
 ---
 
+### 5. Week 15 Testing and Hardening (IA6) Summary
+
+| Requirement | Implementation Details | Evidence Location |
+| :--- | :--- | :--- |
+| **Traceability Matrix** | All 13 tests formally mapped to requirements across functional normal/rejection, boundary, state machine, conflict, security, and recovery paths. | `docs/WEEK15_TESTING_HARDENING_IA6.md` (§1) |
+| **Boundary Tests** | Validates title boundaries (`< 5` or `> 120` chars), schedule window boundaries (`expiresAt <= publishAt` or `> 90 days`), and state jump boundaries. | `test/backend_workflow_and_security_test.dart` (`T-BND-01`–`03`) |
+| **Interoperability & Conflict Tests** | Confirms overlapping pinned slots in same category/audience return `HTTP 409 SCHEDULE_CONFLICT`. | `test/backend_workflow_and_security_test.dart` (`T-CONF-01`) |
+| **Defect #1 Fix (Hardening)** | Virtual clock fast-forward expired JWT operator tokens; decoupled session TTL verification to real UTC wall-clock time while virtual clock operates independently. | `lib/backend/server_app.dart` & `docs/WEEK15_TESTING_HARDENING_IA6.md` (§2) |
+| **Defect #2 Fix (Hardening)** | Default constructor instantiated separate repository instances; consolidated to single shared repository via `ServerApp._internal`. | `lib/backend/server_app.dart` & `docs/WEEK15_TESTING_HARDENING_IA6.md` (§2) |
+| **Regression Verification** | Re-run of full test suite confirms 100% pass rate (13/13 tests) with zero static analysis warnings. | `flutter test` & `flutter analyze` |
+
+---
+
 ## Setup and Execution Instructions
 
 ### 1. Prerequisites
@@ -95,7 +110,7 @@ flutter run -d chrome
 ```bash
 flutter test
 ```
-*(Runs 13 unit, widget, boundary, conflict, security, and recovery tests verifying the Weeks 13–14 lifecycle.)*
+*(Runs 13 unit, widget, boundary, conflict, security, and recovery tests verifying the Weeks 13–15 lifecycle.)*
 
 ---
 
@@ -113,3 +128,4 @@ flutter test
 ## Technical Documentation Links
 - 👉 **[Week 13: Automation Foundation (SA7)](docs/WEEK13_AUTOMATION_SA7.md)**
 - 👉 **[Week 14: Secure Integration (SA8 & IA5)](docs/WEEK14_SECURITY_SA8_IA5.md)**
+- 👉 **[Week 15: Testing and Hardening (IA6)](docs/WEEK15_TESTING_HARDENING_IA6.md)**
