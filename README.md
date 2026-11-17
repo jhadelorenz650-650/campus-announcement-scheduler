@@ -1,5 +1,5 @@
 # PFEBSIT 002: Integrative Programming and Technologies 2
-## Weeks 13–15: Automation Foundation (SA7), Secure Integration (SA8 / IA5) & Testing and Hardening (IA6)
+## Weeks 13–16: Automation Foundation (SA7), Secure Integration (SA8 / IA5), Testing & Hardening (IA6), and Performance & Deployment Evaluation
 
 ### Student Information
 - **Student Name:** Martin, Jhade Lorenz Gedo C.
@@ -11,7 +11,7 @@
 
 ---
 
-## Project 26: Campus Announcement Scheduler (Weeks 13–15 Scope)
+## Project 26: Campus Announcement Scheduler (Weeks 13–16 Scope)
 
 ### 1. Problem and Intended Users
 Approved announcements need controlled publication, automatic expiration, and collision-free scheduling. The primary users are:
@@ -81,6 +81,18 @@ The student prototype implements a strict 10-state bounded state machine:
 
 ---
 
+### 6. Week 16 Performance, Reliability & Deployment Evaluation Summary
+
+| Requirement | Implementation Details | Evidence Location |
+| :--- | :--- | :--- |
+| **Workload Models** | Codified Ordinary (`200` reqs, concurrency `10`) and Peak (`500` reqs, concurrency `50`) traffic profiles. | `tool/benchmark_runner.dart` & `docs/WEEK16_PERFORMANCE_DEPLOYMENT.md` (§1) |
+| **Measured Latency & Throughput** | Ordinary: `748.9 req/s` (`p95: 18.81 ms`, `p99: 33.53 ms`, `0.0%` errors); Peak: `1,397.6 req/s` (`p95: 52.43 ms`, `p99: 53.22 ms`, `0.0%` errors). | `dart run tool/benchmark_runner.dart` |
+| **Monitoring & Health Signals** | Live `GET /api/v1/health` (`HEALTHY` vs `DEGRADED_ACTION_REQUIRED`) and `GET /api/v1/metrics` counters & rolling latency percentiles. | `lib/backend/server_app.dart` & `docs/WEEK16_PERFORMANCE_DEPLOYMENT.md` (§3) |
+| **Rollback & Recovery Rehearsal** | Automated snapshot (`POST /api/v1/admin/snapshot`), state mutation, and rollback (`POST /api/v1/admin/rollback`) verified in `18 ms` (`HTTP 200 OK`). | `tool/benchmark_runner.dart` & Test `T-REL-02` |
+| **Deployment Readiness** | Documented environment comparison (Local vs Offline Fallback vs Campus Production) and conditional pilot readiness recommendation. | `docs/WEEK16_PERFORMANCE_DEPLOYMENT.md` (§4, §6) |
+
+---
+
 ## Setup and Execution Instructions
 
 ### 1. Prerequisites
@@ -110,7 +122,12 @@ flutter run -d chrome
 ```bash
 flutter test
 ```
-*(Runs 13 unit, widget, boundary, conflict, security, and recovery tests verifying the Weeks 13–15 lifecycle.)*
+*(Runs 13 unit, widget, boundary, conflict, security, and recovery tests verifying the Weeks 13–16 lifecycle.)*
+
+### 6. Run Performance & Rollback Benchmark (Week 16)
+```bash
+dart run tool/benchmark_runner.dart
+```
 
 ---
 
@@ -129,3 +146,4 @@ flutter test
 - 👉 **[Week 13: Automation Foundation (SA7)](docs/WEEK13_AUTOMATION_SA7.md)**
 - 👉 **[Week 14: Secure Integration (SA8 & IA5)](docs/WEEK14_SECURITY_SA8_IA5.md)**
 - 👉 **[Week 15: Testing and Hardening (IA6)](docs/WEEK15_TESTING_HARDENING_IA6.md)**
+- 👉 **[Week 16: Performance, Reliability & Deployment Evaluation](docs/WEEK16_PERFORMANCE_DEPLOYMENT.md)**
