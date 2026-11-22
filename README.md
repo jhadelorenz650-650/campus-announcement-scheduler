@@ -1,5 +1,5 @@
 # PFEBSIT 002: Integrative Programming and Technologies 2
-## Weeks 13–16: Automation Foundation (SA7), Secure Integration (SA8 / IA5), Testing & Hardening (IA6), and Performance & Deployment Evaluation
+## Weeks 13–17: Automation (SA7), Security (SA8/IA5), Hardening (IA6), Performance & UAT / Architecture (SA9/AS3)
 
 ### Student Information
 - **Student Name:** Martin, Jhade Lorenz Gedo C.
@@ -11,7 +11,7 @@
 
 ---
 
-## Project 26: Campus Announcement Scheduler (Weeks 13–16 Scope)
+## Project 26: Campus Announcement Scheduler (Weeks 13–17 Scope)
 
 ### 1. Problem and Intended Users
 Approved announcements need controlled publication, automatic expiration, and collision-free scheduling. The primary users are:
@@ -93,6 +93,19 @@ The student prototype implements a strict 10-state bounded state machine:
 
 ---
 
+### 7. Week 17 UAT, Documentation & Architecture Review Summary (SA9 / AS3)
+
+| Requirement | Implementation Details | Evidence Location |
+| :--- | :--- | :--- |
+| **Controlled UAT Execution** | Executed 8 controlled UAT scenarios (`UAT-01` through `UAT-08`) covering Author, Reviewer, Publisher, and Campus User flows, conflict detection, and recovery. | `docs/WEEK17_UAT_AND_ARCHITECTURE_SA9_AS3.md` (§1) |
+| **UAT Defect Fix & Retest** | Resolved `UAT-DEF-01` (virtual clock advance expiring operator JWT) and re-verified archive workflow (`200 OK`, **Fixed & Accepted**). | `docs/WEEK17_UAT_AND_ARCHITECTURE_SA9_AS3.md` (§1) & `lib/backend/server_app.dart` |
+| **OpenAPI Specification** | Complete OpenAPI 3.0.3 API specification (`openapi/openapi.yaml`) verified against all `ServerApp` endpoints and DTOs. | `openapi/openapi.yaml` |
+| **Architecture & Data Flow** | System architecture and end-to-end sequence diagrams documenting Flutter Web, Shared Validator, Shelf API, ConflictDetector, and AutomationEngine. | `docs/WEEK17_UAT_AND_ARCHITECTURE_SA9_AS3.md` (§2) |
+| **ADRs & Alternatives** | Documented Architecture Decision Records (`ADR-01` Unified Dart Monorepo, `ADR-02` Snapshot JSON Persistence, `ADR-03` Hybrid Trigger). | `docs/WEEK17_UAT_AND_ARCHITECTURE_SA9_AS3.md` (§3) |
+| **Maintenance & Limitations** | Documented single-writer constraints, daily/weekly/quarterly ops checks, and secret rotation plans. | `docs/WEEK17_UAT_AND_ARCHITECTURE_SA9_AS3.md` (§4) |
+
+---
+
 ## Setup and Execution Instructions
 
 ### 1. Prerequisites
@@ -122,7 +135,7 @@ flutter run -d chrome
 ```bash
 flutter test
 ```
-*(Runs 13 unit, widget, boundary, conflict, security, and recovery tests verifying the Weeks 13–16 lifecycle.)*
+*(Runs 13 unit, widget, boundary, conflict, security, and recovery tests verifying the Weeks 13–17 lifecycle.)*
 
 ### 6. Run Performance & Rollback Benchmark (Week 16)
 ```bash
@@ -147,3 +160,4 @@ dart run tool/benchmark_runner.dart
 - 👉 **[Week 14: Secure Integration (SA8 & IA5)](docs/WEEK14_SECURITY_SA8_IA5.md)**
 - 👉 **[Week 15: Testing and Hardening (IA6)](docs/WEEK15_TESTING_HARDENING_IA6.md)**
 - 👉 **[Week 16: Performance, Reliability & Deployment Evaluation](docs/WEEK16_PERFORMANCE_DEPLOYMENT.md)**
+- 👉 **[Week 17: UAT, Documentation & Architecture Review (SA9 / AS3)](docs/WEEK17_UAT_AND_ARCHITECTURE_SA9_AS3.md)**
